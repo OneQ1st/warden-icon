@@ -1,16 +1,34 @@
 name: Cleanup Dead Index
-on: [push] # 你一提交删除目录的操作，它就运行
+on: [push]
+
+# 核心：必须显式开启写入权限
+permissions:
+  contents: write
+
 jobs:
   run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Run Clean
-        run: python sync.py
-      - name: Commit Back
+      - name: Checkout code
+        uses: actions/checkout@v4 # 升级到 v4，解决 Node.js 警告
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Run Cleanup Script
+        run: python sync.py # 确保你仓库根目录有个叫 sync.py 的文件
+
+      - name: Commit and Push changes
         run: |
-          git config --local user.name "Action Bot"
-          git config --local user.email "bot@github.com"
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git add icons.json
-          git commit -m "chore: 自动同步清理已删除目录的索引" || exit 0
-          git push
+          # 只有文件真变了才提交，没变就直接跳过，防止死循环报错
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: 自动清理无效索引 [skip ci]"
+            git push
+          fi
