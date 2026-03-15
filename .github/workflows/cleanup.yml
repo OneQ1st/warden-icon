@@ -1,0 +1,16 @@
+name: Cleanup Dead Index
+on: [push] # 你一提交删除目录的操作，它就运行
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run Clean
+        run: python sync.py
+      - name: Commit Back
+        run: |
+          git config --local user.name "Action Bot"
+          git config --local user.email "bot@github.com"
+          git add icons.json
+          git commit -m "chore: 自动同步清理已删除目录的索引" || exit 0
+          git push
