@@ -1,16 +1,28 @@
 name: Cleanup Dead Index
-on: [push] # 你一提交删除目录的操作，它就运行
+on: [push]
+
+permissions:
+  contents: write
+
 jobs:
   run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Run Clean
+      - name: Checkout code
+        uses: actions/checkout@v4 # 升级到 v4 解决警告
+
+      - name: Run Cleanup
         run: python sync.py
-      - name: Commit Back
+
+      - name: Commit and Push
         run: |
-          git config --local user.name "Action Bot"
-          git config --local user.email "bot@github.com"
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git add icons.json
-          git commit -m "chore: 自动同步清理已删除目录的索引" || exit 0
-          git push
+          # 检查是否有改动，没改动就不处理
+          if git diff --staged --quiet; then
+            echo "没有无效索引需要清理"
+          else
+            git commit -m "chore: 自动同步 icons.json 索引 [skip ci]"
+            git push
+          fi
