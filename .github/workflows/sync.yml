@@ -1,0 +1,27 @@
+name: Auto Process Icons
+on:
+  push:
+    paths:
+      - '*.png' # 只有当你上传新图片时才触发
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install sharp
+      - run: node process.js
+      - name: Commit changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          # 只添加生成的文件夹和 icons.json，绝对不添加 node_modules
+          git add .
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "Auto icon processing"
+            git push
+          fi
