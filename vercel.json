@@ -1,0 +1,22 @@
+{
+  "rewrites": [
+    {
+      "source": "/:path*",
+      "destination": "https://www.google.com/s2/favicons?domain=:path*&sz=64",
+      "has": [
+        {
+          "type": "header",
+          "key": "x-not-found",
+          "value": "true"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/:domain.png",
+      "destination": "https://www.google.com/s2/favicons?domain=:domain&sz=64",
+      "permanent": false
+    }
+  ]
+}
