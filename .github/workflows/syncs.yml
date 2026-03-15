@@ -1,0 +1,22 @@
+name: Auto Sync Index
+on:
+  push:
+    paths:
+      - '**' # 任何文件变动都触发
+    branches:
+      - main
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run Sync
+        run: python sync.py
+      - name: Auto Commit
+        run: |
+          git config --local user.email "bot@github.com"
+          git config --local user.name "Index-Bot"
+          git add icons.json
+          git commit -m "chore: 同步删除无效索引" || exit 0
+          git push
