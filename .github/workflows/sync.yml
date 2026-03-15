@@ -2,7 +2,10 @@ name: Auto Process Icons
 on:
   push:
     paths:
-      - '*.png' # 只有当你上传新图片时才触发
+      - '*.png'
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # 响应 2026 年新要求
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -12,16 +15,26 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-      - run: npm install sharp
-      - run: node process.js
-      - name: Commit changes
+          node-version: 24 # 直接使用 Node 24
+          
+      - name: Install Sharp
+        run: npm install sharp
+
+      - name: Run process script
+        run: node process.js
+
+      - name: Cleanup and Push
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          # 只添加生成的文件夹和 icons.json，绝对不添加 node_modules
+          
+          # 关键操作：从 Git 追踪中强制移除 node_modules（如果它存在）
+          git rm -r --cached node_modules || true
+          
           git add .
           if [ -n "$(git status --porcelain)" ]; then
-            git commit -m "Auto icon processing"
+            git commit -m "Cleanup and sync icons"
             git push
+          else
+            echo "No changes to commit"
           fi
