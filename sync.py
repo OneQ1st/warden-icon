@@ -1,45 +1,34 @@
 import json
 import os
 
-# 1. 确定你的文件名
-JSON_FILE = 'icons.json'
+# 锁定文件名
+TARGET = 'icons.json'
 
-def safe_sync():
-    # 预防万一：先备份原始文件
-    if not os.path.exists(JSON_FILE):
-        print(f"找不到 {JSON_FILE}")
+def sync():
+    if not os.path.exists(TARGET):
+        print(f"找不到 {TARGET}")
         return
     
-    with open(JSON_FILE, 'r', encoding='utf-8') as f:
+    with open(TARGET, 'r', encoding='utf-8') as f:
         try:
             data = json.load(f)
-        except Exception as e:
-            print(f"JSON 读取失败: {e}")
+        except:
+            print("JSON 解析失败")
             return
 
-    # 2. 核心清理逻辑
-    # 保持原有的数据结构，只过滤掉目录不存在的项
+    # 逻辑：只保留那些文件夹还存在的名字
     if isinstance(data, list):
-        # 假设你的 json 格式是 [{"name": "zhipianren.emby", ...}, ...]
-        # 脚本会检查当前目录下是否有名为 "zhipianren.emby" 的文件夹
-        new_data = [
-            item for item in data 
-            if os.path.isdir(item.get('name', ''))
-        ]
+        # 只要这个名字对应的文件夹还在，就留着
+        new_data = [name for name in data if os.path.isdir(str(name))]
         
-        removed_count = len(data) - len(new_data)
-    else:
-        print("错误：JSON 格式不是列表，为了安全停止操作。")
-        return
-
-    # 3. 只有在确实有变动时才写入，避免无谓的刷新
-    if removed_count > 0:
-        with open(JSON_FILE, 'w', encoding='utf-8') as f:
-            # indent=2 保证你的 JSON 还是美观可读的，不会缩成一团
-            json.dump(new_data, f, indent=2, ensure_ascii=False)
-        print(f"✅ 清理完成！已移除 {removed_count} 个失效索引，其余内容保持不变。")
-    else:
-        print("💡 没有发现失效索引，文件未做修改。")
+        # 只有在真的有变化时才写入
+        if len(new_data) < len(data):
+            with open(TARGET, 'w', encoding='utf-8') as f:
+                json.dump(new_data, f, indent=2, ensure_ascii=False)
+                f.write('\n') # 规范换行
+            print(f"清理成功：从 {len(data)} 减少到 {len(new_data)}")
+        else:
+            print("索引已经是干净的，无需操作")
 
 if __name__ == "__main__":
-    safe_sync()
+    sync()
