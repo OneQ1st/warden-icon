@@ -4,8 +4,10 @@ const sharp = require('sharp');
 
 async function run() {
     const files = fs.readdirSync('.');
-    // 找出根目录下的图片文件，排除文件夹
-    const images = files.filter(f => f.endsWith('.png') && fs.lstatSync(f).isFile());
+    // 过滤出根目录下的 png，排除掉文件夹（fs.statSync(f).isFile()）
+    const images = files.filter(f => f.endsWith('.png') && fs.statSync(f).isFile());
+
+    console.log(`发现待处理图片: ${images.length} 张`);
 
     for (const file of images) {
         const dir = file; 
@@ -15,19 +17,25 @@ async function run() {
             await sharp(file)
                 .resize(128, 128)
                 .toFile(path.join(dir, 'icon.png'));
-                
-            fs.unlinkSync(file); // 转换成功后删除根目录原图
-            console.log(`✅ Processed and cleaned: ${file}`);
+            
+            // 确保文件写入成功后再删除原图
+            if (fs.existsSync(path.join(dir, 'icon.png'))) {
+                fs.unlinkSync(file); 
+                console.log(`✅ 已处理并清除: ${file}`);
+            }
         } catch (err) {
-            console.error(`❌ Error processing ${file}:`, err);
+            console.error(`❌ 处理 ${file} 失败:`, err);
         }
     }
 
-    // 生成索引供网页显示
-    const allDirs = fs.readdirSync('.').filter(f => 
-        fs.lstatSync(f).isDirectory() && fs.existsSync(path.join(f, 'icon.png'))
-    );
+    // 更新索引，排除掉 node_modules 等干扰项
+    const allDirs = fs.readdirSync('.').filter(f => {
+        return fs.statSync(f).isDirectory() && 
+               f.endsWith('.png') && 
+               fs.existsSync(path.join(f, 'icon.png'));
+    });
     fs.writeFileSync('icons.json', JSON.stringify(allDirs));
+    console.log('✅ icons.json 索引已更新');
 }
 
 run();
