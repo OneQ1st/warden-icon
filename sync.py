@@ -3,35 +3,36 @@ import os
 
 # --- 配置 ---
 JSON_FILE = 'icons.json'
-# 扫描当前目录下所有的子文件夹（排除隐藏文件夹）
-SEARCH_DIRS = [d for d in os.listdir('.') if os.path.isdir(d) and not d.startswith('.')]
+# 这里的键名请根据你 json 里的实际情况修改（是 name 还是其他）
+KEY_NAME = 'name' 
 
-def sync():
-    new_data = {}
+def do_sync():
+    if not os.path.exists(JSON_FILE):
+        print(f"❌ 找不到 {JSON_FILE}")
+        return
 
-    for folder in SEARCH_DIRS:
-        icons = []
-        # 检查目录下是否存在图片
-        if not os.path.exists(folder):
-            continue
-            
-        files = sorted(os.listdir(folder))
-        for f in files:
-            if f.lower().endswith(('.png', '.svg', '.jpg')):
-                # 构造索引条目
-                icons.append({
-                    "name": os.path.splitext(f)[0],
-                    "path": f"{folder}/{f}"
-                })
-        
-        # 只有文件夹里有图标，才写入索引
-        if icons:
-            new_data[folder] = icons
+    with open(JSON_FILE, 'r', encoding='utf-8') as f:
+        try:
+            data = json.load(f)
+        except:
+            print("❌ JSON 格式错误")
+            return
 
+    # 假设你的 icons.json 格式是： [{"name": "zhipianren.emby", ...}, ...]
+    if isinstance(data, list):
+        before_count = len(data)
+        # 核心逻辑：检查同名的文件夹是否存在
+        data = [item for item in data if os.path.isdir(item.get(KEY_NAME, ''))]
+        after_count = len(data)
+    else:
+        print("⚠️ 警告：JSON 不是列表格式，请检查内容。")
+        return
+
+    # 原地覆盖，保留缩进
     with open(JSON_FILE, 'w', encoding='utf-8') as f:
-        json.dump(new_data, f, indent=2, ensure_ascii=False)
-    
-    print(f"✅ 同步成功，当前索引包含 {len(new_data)} 个分类")
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+    print(f"✅ 同步完成！清理了 {before_count - after_count} 条失效索引。")
 
 if __name__ == "__main__":
-    sync()
+    do_sync()
