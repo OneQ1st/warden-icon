@@ -1,10 +1,16 @@
 name: Auto Process Icons
+
 on:
   push:
+    branches:
+      - main # 如果你的默认分支是 master，请改为 master
     paths:
       - '*.png'
+      - '*/icon.png'
+      - 'process.js'
+  workflow_dispatch: # 允许在 GitHub Actions 页面手动点击运行
+
 env:
-  # 强制让 Action 运行在 Node 24 模式
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
@@ -12,24 +18,41 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true # 连续提交时自动取消旧任务，防止 git push 冲突
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          node-version: 24 # 明确使用最新版
-          
+          fetch-depth: 2 # 方便后续如果需要在脚本里对比文件变更
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
       - name: Install Sharp
-        run: npm install sharp
+        run: npm install --no-save sharp
 
       - name: Run process
         run: node process.js
 
       - name: Push Changes
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
           git add .
           if [ -n "$(git status --porcelain)" ]; then
-            git commit -m "Fix naming conflict and sync icons"
+            git commit -m "chore: auto process icons and update index [skip ci]"
             git push
           fi
